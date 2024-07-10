@@ -4,7 +4,7 @@ install_requires = [
         "Django>=5.0.6",
     ],
 setup(
-    name="django-password-policies-kminc",
+    name="django_password_policies_kminc",
     version='0.8.7',
     description="A Django application to implement password policies.",
     long_description="""\
