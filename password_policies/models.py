@@ -3,11 +3,7 @@ from django.contrib.auth import get_user_model
 from django.db import models
 from django.db.models import signals
 from django.utils import timezone
-try:
-    from django.utils.translation import gettext_lazy as _
-except ImportError:
-    # Before in Django 3.0
-    from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 
 from password_policies.conf import settings
 from password_policies.managers import PasswordHistoryManager
@@ -17,18 +13,19 @@ class PasswordChangeRequired(models.Model):
     """
     Stores an entry to enforce password changes, related to :model:`auth.User`.
 
-    Has the following fields:"""
+    Has the following fields:
+    """
 
     created = models.DateTimeField(
         auto_now_add=True,
         verbose_name=_("created"),
         db_index=True,
-        help_text=_("The date the entry was " "created."),
+        help_text=_("The date the entry was created."),
     )
     user = models.OneToOneField(
         django_settings.AUTH_USER_MODEL,
         verbose_name=_("user"),
-        help_text=_("The user who needs to change " "his/her password."),
+        help_text=_("The user who needs to change his/her password."),
         related_name="password_change_required",
         on_delete=models.CASCADE,
     )
@@ -44,13 +41,14 @@ class PasswordHistory(models.Model):
     """
     Stores a single password history entry, related to :model:`auth.User`.
 
-    Has the following fields:"""
+    Has the following fields:
+    """
 
     created = models.DateTimeField(
         auto_now_add=True,
         verbose_name=_("created"),
         db_index=True,
-        help_text=_("The date the entry was " "created."),
+        help_text=_("The date the entry was created."),
     )
     password = models.CharField(
         max_length=128,
@@ -60,7 +58,7 @@ class PasswordHistory(models.Model):
     user = models.ForeignKey(
         django_settings.AUTH_USER_MODEL,
         verbose_name=_("user"),
-        help_text=_("The user this password history " "entry belongs to."),
+        help_text=_("The user this password history entry belongs to."),
         related_name="password_history_entries",
         on_delete=models.CASCADE,
     )
@@ -76,14 +74,15 @@ class PasswordHistory(models.Model):
 
 class PasswordProfile(models.Model):
     """
-    Stores a single password history entry, related to :model:`auth.User`.
+    Stores a single password profile entry, related to :model:`auth.User`.
 
-    Has the following fields:"""
+    Has the following fields:
+    """
 
     created = models.DateTimeField(
         verbose_name=_("created"),
         db_index=True,
-        help_text=_("The date the entry was " "created."),
+        help_text=_("The date the entry was created."),
         auto_now_add=True,
     )
     last_changed = models.DateTimeField(
@@ -95,7 +94,7 @@ class PasswordProfile(models.Model):
     user = models.OneToOneField(
         django_settings.AUTH_USER_MODEL,
         verbose_name=_("user"),
-        help_text=_("The user this password profile " "belongs to."),
+        help_text=_("The user this password profile belongs to."),
         related_name="password_profile",
         on_delete=models.CASCADE,
     )
@@ -120,7 +119,7 @@ def password_change_signal(sender, instance, **kwargs):
         password1 = getattr(user, settings.PASSWORD_MODEL_FIELD)
         password2 = getattr(instance, settings.PASSWORD_MODEL_FIELD)
         if not password1 == password2:
-            profile, _ign = PasswordProfile.objects.get_or_create(user=instance)
+            profile, _ = PasswordProfile.objects.get_or_create(user=instance)
             profile.last_changed = timezone.now()
             profile.save()
     except user_model.DoesNotExist:

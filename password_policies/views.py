@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 from django.contrib.auth import get_user_model, update_session_auth_hash
 from django.contrib.auth.decorators import login_required
 from django.core import signing
@@ -5,21 +7,10 @@ from django.utils import timezone
 
 from password_policies.exceptions import MustBeLoggedOutException
 
-try:
-    from django.urls.base import reverse
-except ImportError:
-    # Before Django 2.0
-    from django.core.urlresolvers import reverse
-
+from django.urls import reverse
 from django.shortcuts import resolve_url
 from django.utils.decorators import method_decorator
-
-try:
-    from django.utils.encoding import force_str as force_text
-except ImportError:
-    # Before in Django 2.0
-    from django.utils.encoding import force_text
-
+from django.utils.encoding import force_str
 from django.utils.http import urlsafe_base64_decode
 from django.views.decorators.cache import never_cache
 from django.views.decorators.csrf import csrf_protect
@@ -54,11 +45,8 @@ class LoggedOutMixin(View):
 
 class PasswordChangeDoneView(TemplateView):
     """
-    A view to redirect to after a successfull change of a user's password."""
+    A view to redirect to after a successful change of a user's password."""
 
-    #: The template used by this view. Defaults to
-    #: the same template used
-    #: by :func:`django.contrib.views.password_change_done`.
     template_name = "registration/password_change_done.html"
 
     @method_decorator(login_required)
@@ -68,21 +56,13 @@ class PasswordChangeDoneView(TemplateView):
 
 class PasswordChangeFormView(FormView):
     """
-    A view that allows logged in users to change their password."""
+    A view that allows logged-in users to change their password."""
 
-    #: The form used by this view.
     form_class = PasswordPoliciesChangeForm
-    #: An URL to redirect to after the form has been successfully
-    #: validated.
     success_url = None
-    #: The template used by this view. Defaults to
-    #: the same template used
-    #: by :func:`django.contrib.views.password_change`.
     template_name = "registration/password_change_form.html"
-    #: doc
     redirect_field_name = settings.REDIRECT_FIELD_NAME
 
-    # @method_decorator(sensitive_post_parameters)
     @method_decorator(csrf_protect)
     @method_decorator(login_required)
     def dispatch(self, *args, **kwargs):
@@ -93,8 +73,6 @@ class PasswordChangeFormView(FormView):
 
     def form_valid(self, form):
         form.save()
-        # Updating the password logs out all other sessions for the user
-        # except the current one.
         update_session_auth_hash(self.request, form.user)
         return super().form_valid(form)
 
@@ -104,12 +82,6 @@ class PasswordChangeFormView(FormView):
         return form_class(self.request.user, **self.get_form_kwargs())
 
     def get_success_url(self):
-        """
-        Returns a query string field with a previous URL if available (Mimicing
-        the login view. Used on forced password changes, to know which URL the
-        user was requesting before the password change.)
-        If not returns the :attr:`~PasswordChangeFormView.success_url` attribute
-        if set, otherwise the URL to the :class:`PasswordChangeDoneView`."""
         checked = "_password_policies_last_checked"
         last = "_password_policies_last_changed"
         required = "_password_policies_change_required"
@@ -134,36 +106,20 @@ class PasswordChangeFormView(FormView):
 
 class PasswordResetCompleteView(LoggedOutMixin, TemplateView):
     """
-    A view to redirect to after a password reset has been successfully
-    confirmed."""
+    A view to redirect to after a password reset has been successfully confirmed."""
 
-    #: The template used by this view. Defaults to
-    #: the same template used
-    #: by :func:`django.contrib.views.password_reset_complete`.
     template_name = "registration/password_reset_complete.html"
 
     def get_context_data(self, **kwargs):
-        """
-        Adds the login URL to redirect to (defaults to the LOGIN_URL setting
-        in Django) to the view's context."""
-        from django.conf import settings
-
         kwargs["login_url"] = resolve_url(settings.LOGIN_URL)
         return super().get_context_data(**kwargs)
 
 
 class PasswordResetConfirmView(LoggedOutMixin, FormView):
-    #: The form used by this view.
     form_class = PasswordPoliciesForm
-    #: An URL to redirect to after the form has been successfully
-    #: validated.
     success_url = None
-    #: The template used by this view. Defaults to
-    #: the same template used
-    #: by :func:`django.contrib.views.password_reset_confirm`.
     template_name = "registration/password_reset_confirm.html"
 
-    # @method_decorator(sensitive_post_parameters)
     @method_decorator(never_cache)
     def dispatch(self, request, *args, **kwargs):
         self.uidb64 = args[0]
@@ -172,7 +128,7 @@ class PasswordResetConfirmView(LoggedOutMixin, FormView):
         self.validlink = False
         if self.uidb64 and self.timestamp and self.signature:
             try:
-                uid = force_text(urlsafe_base64_decode(self.uidb64))
+                uid = force_str(urlsafe_base64_decode(self.uidb64))
                 self.user = get_user_model().objects.get(id=uid)
             except (ValueError, get_user_model().DoesNotExist):
                 self.user = None
@@ -208,9 +164,6 @@ class PasswordResetConfirmView(LoggedOutMixin, FormView):
         return form_class(self.user, **self.get_form_kwargs())
 
     def get_success_url(self):
-        """
-        Redirects to :attr:`~PasswordResetConfirmView.success_url`
-        if set, otherwise to the :class:`PasswordResetCompleteView`."""
         if self.success_url:
             url = self.success_url
         else:
@@ -227,38 +180,17 @@ class PasswordResetDoneView(LoggedOutMixin, TemplateView):
     """
     A view to redirect to after a password reset has been requested."""
 
-    #: The template used by this view. Defaults to
-    #: the same template used
-    #: by :func:`django.contrib.views.password_reset_done`.
     template_name = "registration/password_reset_done.html"
 
 
 class PasswordResetFormView(LoggedOutMixin, FormView):
-    """
-    A view that allows registered users to change their password."""
-
-    #: A relative path to a template in the root of a template directory
-    #: to generate the body of the mail.
     email_template_name = "registration/password_reset_email.txt"
-    #: A relative path to a template in the root of a template directory
-    #: to generate the HTML attachment of the mail.
     email_html_template_name = "registration/password_reset_email.html"
-    #: The form used by this view.
     form_class = PasswordResetForm
-    #: The email address to use as sender of the email.
     from_email = None
-    #: Determines wether this view is used by an admin site.
-    #: Overrides domain and site name if set to ``True``.
     is_admin_site = False
-    #: A relative path to a template in the root of a template directory to
-    #: generate the subject of the mail.
     subject_template_name = "registration/password_reset_subject.txt"
-    #: An URL to redirect to after the form has been successfully
-    #: validated.
     success_url = None
-    #: The template used by this view. Defaults to
-    #: the same template used
-    #: by :func:`django.contrib.views.password_reset`.
     template_name = "registration/password_reset_form.html"
 
     def form_valid(self, form):
@@ -280,9 +212,6 @@ class PasswordResetFormView(LoggedOutMixin, FormView):
         return super().dispatch(request, *args, **kwargs)
 
     def get_success_url(self):
-        """
-        Redirects to :attr:`~PasswordResetFormView.success_url`
-        if set, otherwise to the :class:`PasswordResetDoneView`."""
         if self.success_url:
             url = self.success_url
         else:

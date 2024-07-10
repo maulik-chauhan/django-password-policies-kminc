@@ -13,14 +13,14 @@ class PasswordHistoryManager(models.Manager):
 
     def delete_expired(self, user, offset=None):
         """
-Deletes expired password history entries from the database(s).
+        Deletes expired password history entries from the database(s).
 
-:arg user: A :class:`~django.contrib.auth.models.User` instance.
-:arg int offset: A number specifying how much entries are to be kept
-  in the user's password history. Defaults
-  to :py:attr:`~password_policies.conf.Settings.PASSWORD_HISTORY_COUNT`.
-"""
-        if not offset:
+        :arg user: A :class:`~django.contrib.auth.models.User` instance.
+        :arg int offset: A number specifying how much entries are to be kept
+        in the user's password history. Defaults
+        to :py:attr:`~password_policies.conf.Settings.PASSWORD_HISTORY_COUNT`.
+        """
+        if offset is None:
             offset = self.default_offset
         qs = self.filter(user=user)
         if qs.count() > offset:
@@ -29,13 +29,13 @@ Deletes expired password history entries from the database(s).
 
     def change_required(self, user):
         """
-Checks if the user needs to change his/her password.
+        Checks if the user needs to change his/her password.
 
-:arg object user: A :class:`~django.contrib.auth.models.User` instance.
-:returns: ``True`` if the user needs to change his/her password,
-    ``False`` otherwise.
-:rtype: bool
-"""
+        :arg object user: A :class:`~django.contrib.auth.models.User` instance.
+        :returns: ``True`` if the user needs to change his/her password,
+        ``False`` otherwise.
+        :rtype: bool
+        """
         newest = self.get_newest(user)
         if newest:
             last_change = newest.created
@@ -50,14 +50,14 @@ Checks if the user needs to change his/her password.
 
     def check_password(self, user, raw_password):
         """
-Compares a raw (UNENCRYPTED!!!) password to entries in the users's
-password history.
+        Compares a raw (UNENCRYPTED!!!) password to entries in the users's
+        password history.
 
-:arg object user: A :class:`~django.contrib.auth.models.User` instance.
-:arg str raw_password: A unicode string representing a password.
-:returns: ``False`` if a password has been used before, ``True`` if not.
-:rtype: bool
-"""
+        :arg object user: A :class:`~django.contrib.auth.models.User` instance.
+        :arg str raw_password: A unicode string representing a password.
+        :returns: ``False`` if a password has been used before, ``True`` if not.
+        :rtype: bool
+        """
         result = True
         if user.check_password(raw_password):
             result = False
@@ -72,14 +72,14 @@ password history.
 
     def get_newest(self, user):
         """
-Gets the newest password history entry.
+        Gets the newest password history entry.
 
-:arg object user: A :class:`~django.contrib.auth.models.User` instance.
-:returns: A :class:`~password_policies.models.PasswordHistory` instance
-  if found, ``None`` if not.
-"""
+        :arg object user: A :class:`~django.contrib.auth.models.User` instance.
+        :returns: A :class:`~password_policies.models.PasswordHistory` instance
+        if found, ``None`` if not.
+        """
         try:
-            entry = self.filter(user=user).latest()
+            entry = self.filter(user=user).latest('created')
         except ObjectDoesNotExist:
             return None
         return entry

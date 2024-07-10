@@ -1,22 +1,11 @@
 import re
 from datetime import timedelta
 
-try:
-    from django.urls.base import reverse, resolve, NoReverseMatch, Resolver404
-except ImportError:
-    # Before Django 2.0
-    from django.core.urlresolvers import NoReverseMatch, Resolver404, resolve, reverse
-
+from django.urls import reverse, resolve, NoReverseMatch, Resolver404
 from django.http import HttpResponseRedirect
 from django.utils import timezone
-
-import django.utils.deprecation
-if hasattr(django.utils.deprecation, 'MiddlewareMixin'):
-    from django.utils.deprecation import MiddlewareMixin
-else:
-    MiddlewareMixin = object
-
-from django.conf import settings as django_setings
+from django.utils.deprecation import MiddlewareMixin
+from django.conf import settings as django_settings
 
 from password_policies.conf import settings
 from password_policies.models import PasswordChangeRequired, PasswordHistory
@@ -32,43 +21,26 @@ class PasswordChangeMiddleware(MiddlewareMixin):
     If the user has no password history it is assumed that the
     password was last changed when the user has or was registered.
 
-    .. note::
-        This only works on a GET HTTP method. Redirections on a
-        HTTP POST are tricky, so the risk of messing up a POST
-        is not taken...
+    This only works on a GET HTTP method. Redirections on a
+    HTTP POST are tricky, so the risk of messing up a POST
+    is not taken...
 
     To use this middleware you need to add it to the
-    ``MIDDLEWARE_CLASSES`` list in a project's settings::
+    `MIDDLEWARE` list in a project's settings:
 
-        MIDDLEWARE_CLASSES = (
+        MIDDLEWARE = [
             'django.middleware.common.CommonMiddleware',
             'django.contrib.sessions.middleware.SessionMiddleware',
             'django.middleware.csrf.CsrfViewMiddleware',
             'django.contrib.auth.middleware.AuthenticationMiddleware',
             'password_policies.middleware.PasswordChangeMiddleware',
             # ... other middleware ...
-        )
+        ]
 
-
-    or ``MIDDLEWARE`` if using Django 1.10 or higher:
-
-        MIDDLEWARE = (
-            'django.middleware.common.CommonMiddleware',
-            'django.contrib.sessions.middleware.SessionMiddleware',
-            'django.middleware.csrf.CsrfViewMiddleware',
-            'django.contrib.auth.middleware.AuthenticationMiddleware',
-            'password_policies.middleware.PasswordChangeMiddleware',
-            # ... other middleware ...
-        )
-
-    .. note::
-        The order of this middleware in the stack is important,
-        it must be listed after the authentication AND the session
-        middlewares.
-
-    .. warning::
-        This middleware does not try to redirect using the HTTPS
-        protocol."""
+    The order of this middleware in the stack is important,
+    it must be listed after the authentication AND the session
+    middlewares.
+    """
 
     checked = "_password_policies_last_checked"
     expired = "_password_policies_expired"
@@ -82,30 +54,23 @@ class PasswordChangeMiddleware(MiddlewareMixin):
             if newest:
                 request.session[self.last] = newest.created
             else:
-                # TODO: This relies on request.user.date_joined which might not
-                # be available!!!
                 request.session[self.last] = request.user.date_joined
         if request.session[self.last] < self.expiry_datetime:
             request.session[self.required] = True
-            if not PasswordChangeRequired.objects.filter(user=request.user).count():
+            if not PasswordChangeRequired.objects.filter(user=request.user).exists():
                 PasswordChangeRequired.objects.create(user=request.user)
         else:
             request.session[self.required] = False
 
     def _check_necessary(self, request):
-
         if not request.session.get(self.checked, None):
             request.session[self.checked] = self.now
 
-            #  If the PASSWORD_CHECK_ONLY_AT_LOGIN is set, then only check at the beginning of session, which we can
-            #  tell by self.now time having just been set.
         if (
             not settings.PASSWORD_CHECK_ONLY_AT_LOGIN
             or request.session.get(self.checked, None) == self.now
         ):
-            # If a password change is enforced we won't check
-            # the user's password history, thus reducing DB hits...
-            if PasswordChangeRequired.objects.filter(user=request.user).count():
+            if PasswordChangeRequired.objects.filter(user=request.user).exists():
                 request.session[self.required] = True
                 return
             if request.session[self.checked] < self.expiry_datetime:
@@ -119,18 +84,16 @@ class PasswordChangeMiddleware(MiddlewareMixin):
             if settings.PASSWORD_USE_HISTORY:
                 self._check_history(request)
         else:
-            # In the case where PASSWORD_CHECK_ONLY_AT_LOGIN is true, the required key is not removed,
-            # therefore causing a never ending password update loop
             request.session[self.required] = False
 
     def _is_excluded_path(self, actual_path):
         paths = settings.PASSWORD_CHANGE_MIDDLEWARE_EXCLUDED_PATHS[:]
         path = r"^%s$" % self.url
         paths.append(path)
-        media_url = django_setings.MEDIA_URL
+        media_url = django_settings.MEDIA_URL
         if media_url:
             paths.append(r"^%s?" % media_url)
-        static_url = django_setings.STATIC_URL
+        static_url = django_settings.STATIC_URL
         if static_url:
             paths.append(r"^%s?" % static_url)
         if settings.PASSWORD_CHANGE_MIDDLEWARE_ALLOW_LOGOUT:
@@ -141,7 +104,7 @@ class PasswordChangeMiddleware(MiddlewareMixin):
             else:
                 paths.append(r"^%s$" % logout_url)
             try:
-                logout_url = u"/admin/logout/"
+                logout_url = "/admin/logout/"
                 resolve(logout_url)
             except Resolver404:
                 pass
@@ -172,11 +135,9 @@ class PasswordChangeMiddleware(MiddlewareMixin):
         self.now = timezone.now()
         self.url = reverse("password_change")
 
-        auth = request.user.is_authenticated
-
         if (
             settings.PASSWORD_DURATION_SECONDS
-            and auth
+            and request.user.is_authenticated
             and not self._is_excluded_path(request.path)
         ):
             self.check = PasswordCheck(request.user)

@@ -13,7 +13,6 @@ class PasswordChangeViewsTestCase(TestCase):
     def setUp(self):
         self.user = create_user()
         return super(PasswordChangeViewsTestCase, self).setUp()
-        #
 
     def test_password_change(self):
         """

@@ -1,19 +1,20 @@
 from setuptools import find_packages, setup
 
-install_requires = ["django"]
-
+install_requires = [
+        "Django>=5.0.6",
+    ],
 setup(
-    name="django-password-policies-iplweb",
-    version=__import__("password_policies").__version__,
-    description="A Django application to implent password policies.",
+    name="django-password-policies-kminc",
+    version='0.8.7',
+    description="A Django application to implement password policies.",
     long_description="""\
 django-password-policies is an application for the Django framework that
 provides unicode-aware password policies on password changes and resets
 and a mechanism to force password changes.
 """,
-    author="Michal Pasternak",
-    author_email="michal.dtz@gmail.com",
-    url="https://github.com/iplweb/django-password-policies-iplweb",
+    author="Maulik Chauhan",
+    author_email="maulik.chauhan00@gmail.com",
+    url="https://github.com/maulik-chauhan/django-password-policies-kminc",
     include_package_data=True,
     packages=find_packages(),
     zip_safe=False,
@@ -26,6 +27,8 @@ and a mechanism to force password changes.
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.10",
+        "Programming Language :: Python :: 3.11",
         "Framework :: Django",
         "License :: OSI Approved :: BSD License",
         "Topic :: Software Development :: Libraries :: Python Modules",

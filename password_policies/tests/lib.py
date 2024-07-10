@@ -37,10 +37,18 @@ def create_user(
     commit=True,
 ):
     """Creates a non-staff user with dynamically generated properties.
-    This function dynamically creates an user with following properties:
-    - The user is neither an admin nor a staff member.
-    - The user is active.
-    - The date and his/her last login is generated dynamically."""
+
+    Args:
+        username (str): Username of the user. Default is "alice".
+        email (str): Email of the user. Default is "alice@example.com".
+        raw_password (str, optional): Raw password for the user. Default is the last password in the passwords list.
+        date_joined (datetime, optional): Date the user joined. Default is dynamically generated.
+        last_login (datetime, optional): Last login time. Default is the same as date_joined.
+        commit (bool): Whether to save the user instance. Default is True.
+
+    Returns:
+        user: A User instance.
+    """
     count = settings.PASSWORD_HISTORY_COUNT
     duration = settings.PASSWORD_DURATION_SECONDS
     if not raw_password:
@@ -64,9 +72,15 @@ def create_user(
     return user
 
 
-def create_password_history(user, password_list=[]):
+def create_password_history(user, password_list=None):
+    """Creates password history for a user.
+
+    Args:
+        user: A User instance.
+        password_list (list, optional): List of raw passwords. Default is the predefined passwords list.
+    """
     duration = settings.PASSWORD_DURATION_SECONDS
-    if not password_list:
+    if password_list is None:
         password_list = passwords
     seconds = len(password_list) * duration
     created = get_datetime_from_delta(timezone.now(), seconds)
@@ -75,9 +89,17 @@ def create_password_history(user, password_list=[]):
         entry = PasswordHistory.objects.create(password=password, user=user)
         entry.created = created
         entry.save()
-        created = get_datetime_from_delta(created, (duration * -1))
+        created = get_datetime_from_delta(created, duration * -1)
 
 
 def get_datetime_from_delta(value, seconds):
-    "Returns a Datetime value after subtracting given seconds."
+    """Returns a Datetime value after subtracting given seconds.
+
+    Args:
+        value (datetime): The base datetime value.
+        seconds (int): The number of seconds to subtract.
+
+    Returns:
+        datetime: The resulting datetime.
+    """
     return value - timedelta(seconds=seconds)

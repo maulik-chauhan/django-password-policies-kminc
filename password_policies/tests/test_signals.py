@@ -11,7 +11,9 @@ class TestSignals(TestCase):
     def test_password_change_signal(self):
         self.user.password = "changed"
         PasswordProfile.objects.all().delete()
+        # Simulate a password change signal
         assert password_change_signal(sender=None, instance=self.user) is None
 
     def test_password_created_signal(self):
+        # Check if PasswordProfile is created for the user
         PasswordProfile.objects.get(user=self.user)
