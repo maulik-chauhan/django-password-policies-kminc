@@ -1,0 +1,2 @@
+class MustBeLoggedOutException(Exception):
+    pass

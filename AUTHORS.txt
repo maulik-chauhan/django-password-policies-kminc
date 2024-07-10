@@ -1,0 +1,6 @@
+Original author:
+* Tarak Blah, https://github.com/tarak
+
+Maintainer:
+* Michał Pasternak, https://github.com/mpasternak
+* Maulik Chauhan, https://github.com/maulik-chauhan
